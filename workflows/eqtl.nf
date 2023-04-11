@@ -151,10 +151,19 @@ workflow EQTL {
     }
 
     if (params.TensorQTL.run){
-        TENSORQTL_eqtls(
-            PREPERE_EXP_BED.out.exp_bed,
-            PLINK_CONVERT.out.plink_path,
-        )
+        if (param.utilise_gpu){
+            TENSORQTL_eqtls(
+                PREPERE_EXP_BED.out.exp_bed.collect(),
+                PLINK_CONVERT.out.plink_path,
+                param.utilise_gpu
+            )
+        } else if (!param.utilise_gpu){
+            TENSORQTL_eqtls(
+                PREPERE_EXP_BED.out.exp_bed,
+                PLINK_CONVERT.out.plink_path,
+                params.utilise_gpu
+            )
+        }
     }
 
 

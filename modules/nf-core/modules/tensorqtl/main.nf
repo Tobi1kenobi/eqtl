@@ -1,8 +1,7 @@
 
-process TENSORQTL {
-    label 'gpu'
+process TENSORQTL_CPU{
+    label 'process_medium'
     tag {condition}
-    // label 'process_high_memory'
     
   // /lustre/scratch123/hgi/projects/ukbb_scrna/pipelines/singularity_images/nf_tensorqtl_1.2.img
     publishDir  path: "${params.outdir}/TensorQTL_eQTLS/${condition}",
@@ -31,14 +30,46 @@ process TENSORQTL {
     path('nom_output')
 
   script:
-
-    
-    
     """
       tensorqtl_analyse.py --plink_prefix_path ${plink_files_prefix}/plink_genotypes --expression_bed ${aggrnorm_counts_bed} --covariates_file ${genotype_pcs_tsv} -window ${params.windowSize} -nperm ${params.numberOfPermutations}
     """
 }
 
+process TENSORQTL_GPU{
+    label 'gpu'
+    
+  // /lustre/scratch123/hgi/projects/ukbb_scrna/pipelines/singularity_images/nf_tensorqtl_1.2.img
+    publishDir  path: "${params.outdir}/TensorQTL_eQTLS/",
+                overwrite: "true"
+
+  if (workflow.containerEngine == 'singularity' && !params.singularity_pull_docker_container) {
+    // container "/lustre/scratch123/hgi/projects/ukbb_scrna/pipelines/singularity_images/nf_tensorqtl_1.2.img"
+    container "${params.eqtl_container}"
+  } else {
+    container "${params.eqtl_docker}"
+  }
+
+    input:
+        tuple input_list
+        each path(plink_files_prefix)
+
+    output:
+    path("*/Cis_eqtls.tsv"), emit: qtl_bin
+    path("*/Cis_eqtls_qval.tsv"), emit: q_qtl_bin
+    path('*/nom_output')
+
+    script:
+    """
+    for input_tuple in input_list
+    do
+        CONDITION=input_tuple[0]
+        aggrnorm_counts_bed=input_tuple[1]
+        genotype_pcs_tsv = input_tuple[2]
+        mkdir ${condition}
+        tensorqtl_analyse.py --plink_prefix_path ${params.plink_files_prefix}/plink_genotypes --expression_bed $${input_tuple[1]} --covariates_file ${input_tuple[2]} -window ${params.windowSize} -nperm ${params.numberOfPermutations} -o ${input_tuple[0]}
+    done
+    """
+}
 
 workflow TENSORQTL_eqtls{
     take:
@@ -46,9 +77,13 @@ workflow TENSORQTL_eqtls{
         plink_genotype
         
     main:
-  
-      TENSORQTL(
-          condition_bed,
-          plink_genotype
-      )
+      if (params.utilise_gpu){
+        TENSORQTL_GPU(
+            condition_bed,
+            plink_genotype)
+     } else {
+        TENSORQTL_CPU(
+            condition_bed,
+            plink_genotype)
+      }
 }
