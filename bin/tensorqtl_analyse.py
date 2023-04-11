@@ -82,6 +82,14 @@ def main():
         required=True,
         help=''
     )
+    parser.add_argument(
+        '-o', '--outdir',
+        action='store',
+        dest='outdir',
+        required=False,
+        default='.',
+        help=''
+    )
 
     options = parser.parse_args()
     # ValueError: The BED file must define the TSS/cis-window center, with start+1 == end.
@@ -95,6 +103,7 @@ def main():
     plink_prefix_path=options.plink_prefix_path
     expression_bed=options.expression_bed
     covariates_file=options.covariates_file
+    outdir=options.outdir
 
 
     phenotype_df, phenotype_pos_df = read_phenotype_bed(expression_bed)
@@ -132,7 +141,7 @@ def main():
     pr = genotypeio.PlinkReader(plink_prefix_path)
     genotype_df = pr.load_genotypes()
     variant_df = pr.bim.set_index('snp')[['chrom', 'pos']]
-    Directory = './nom_output'
+    Directory = f'{outdir}/nom_output'
     os.mkdir(Directory)
     cis.map_nominal(genotype_df, variant_df,
                     phenotype_df.loc[phenotype_pos_df['chr']!='chrY'],
@@ -158,13 +167,13 @@ def main():
                         covariates_df=covariates_df)
     print('----cis eQTLs processed ------')
     cis_df.head()
-    cis_df.to_csv("Cis_eqtls.tsv",sep="\t")
+    cis_df.to_csv(f"{outdir}/Cis_eqtls.tsv",sep="\t")
     sv = ~np.isnan(cis_df['pval_beta'])
     print(f"Dropping {sum(sv)} variants withouth Beta-approximated p-values to\n.")
     cis_df_dropped = cis_df.loc[sv]
     r = stats.pearsonr(cis_df_dropped['pval_perm'], cis_df_dropped['pval_beta'])[0]
     calculate_qvalues(cis_df_dropped, qvalue_lambda=0.85)
-    cis_df_dropped.to_csv("Cis_eqtls_qval.tsv", sep='\t')
+    cis_df_dropped.to_csv(f"{outdir}/Cis_eqtls_qval.tsv", sep='\t')
 
 if __name__ == '__main__':
     main()
