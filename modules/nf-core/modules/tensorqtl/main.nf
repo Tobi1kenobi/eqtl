@@ -79,7 +79,7 @@ workflow TENSORQTL_eqtls{
     main:
       if (params.utilise_gpu){
         TENSORQTL_GPU(
-            condition_bed,
+            condition_bed.collect(),
             plink_genotype)
      } else {
         TENSORQTL_CPU(
