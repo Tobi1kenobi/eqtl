@@ -62,10 +62,7 @@ process TENSORQTL_GPU{
     """
     for input_tuple in input_list
     do
-        CONDITION=input_tuple[0]
-        aggrnorm_counts_bed=input_tuple[1]
-        genotype_pcs_tsv = input_tuple[2]
-        mkdir ${condition}
+        mkdir ${input_tuple[0]}
         tensorqtl_analyse.py --plink_prefix_path ${params.plink_files_prefix}/plink_genotypes --expression_bed $${input_tuple[1]} --covariates_file ${input_tuple[2]} -window ${params.windowSize} -nperm ${params.numberOfPermutations} -o ${input_tuple[0]}
     done
     """
